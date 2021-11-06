@@ -62,9 +62,7 @@ type MystemInstaller(httpClient: HttpClient) =
             use reader = ReaderFactory.Open(stream)
             while reader.MoveToNextEntry() do
                 if not reader.Entry.IsDirectory && reader.Entry.Key.Contains("mystem") then
-                    reader.WriteEntryToFile(mystemBin, ExtractionOptions(Overwrite=true,
-                                                                         PreserveAttributes=true,
-                                                                         PreserveFileTime = true))
+                    reader.WriteEntryToFile(mystemBin, ExtractionOptions(Overwrite=true))
         finally
             File.Delete(tempPath)
     }

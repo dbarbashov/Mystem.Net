@@ -147,7 +147,7 @@ type MystemProcess(args: string[]) =
             sr.Dispose()
             cts.Dispose()
 
-type Mystem(settings: MystemSettings) as x =
+type Mystem(settings: MystemSettings) =
     let mystemArgs =
         [|
             "--format"
