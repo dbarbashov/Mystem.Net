@@ -4,11 +4,21 @@
         <TargetFramework>netstandard2.1</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <WarnOn>3390;$(WarnOn)</WarnOn>
-        <RootNamespace>Mystem.Net</RootNamespace>
+        <RootNamespace>Mystem.net</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Installer.fs" />
         <Compile Include="Library.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CliWrap" Version="3.3.3" />
+      <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.0" />
+      <PackageReference Include="Nerdbank.Streams" Version="2.8.50" />
+      <PackageReference Include="SharpCompress" Version="0.30.0" />
+      <PackageReference Include="System.Text.Json" Version="5.0.0" />
+      <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
     </ItemGroup>
 
 </Project>
