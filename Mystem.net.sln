@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mystem.Net", "src\Mystem.Net\Mystem.Net.fsproj", "{7D9BD03E-F6F9-4B56-9BC4-240A99B18695}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C4CAC6C4-9C4D-46A5-BC58-F1C5C124491E}"
+ProjectSection(SolutionItems) = preProject
+	README.md = README.md
+	.gitignore = .gitignore
+EndProjectSection
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mystem.Net.Tests", "src\Mystem.Net.Tests\Mystem.Net.Tests.fsproj", "{A6CA2AD8-E7A6-44DC-A91E-3DA9C02CB0C4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D9BD03E-F6F9-4B56-9BC4-240A99B18695}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D9BD03E-F6F9-4B56-9BC4-240A99B18695}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D9BD03E-F6F9-4B56-9BC4-240A99B18695}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D9BD03E-F6F9-4B56-9BC4-240A99B18695}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6CA2AD8-E7A6-44DC-A91E-3DA9C02CB0C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6CA2AD8-E7A6-44DC-A91E-3DA9C02CB0C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6CA2AD8-E7A6-44DC-A91E-3DA9C02CB0C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6CA2AD8-E7A6-44DC-A91E-3DA9C02CB0C4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
