@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\src\Mystem.Net\Mystem.Net.fsproj" />
+      <ProjectReference Include="..\Mystem.Net\Mystem.Net.fsproj" />
     </ItemGroup>
 
 </Project>
