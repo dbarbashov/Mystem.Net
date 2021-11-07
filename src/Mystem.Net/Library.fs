@@ -1,11 +1,12 @@
 ﻿namespace Mystem.Net
 
 open System
-open System.Collections.Generic
 open System.IO
 open System.Net.Http
 open System.Runtime.InteropServices
+open System.Text
 open System.Text.Json
+open System.Text.Json.Serialization
 open System.Threading
 open System.Threading.Tasks
 open CliWrap
@@ -18,15 +19,26 @@ open Nerdbank.Streams
 [<Struct>]
 [<CLIMutable>]
 type MystemAnalysisResult = {
-    lex: string
-    gr: string
+    [<JsonPropertyName("lex")>]
+    /// Infinitive form of a word
+    Lexeme: string
+    [<JsonPropertyName("gr")>]
+    /// Grammeme of a word (e.g. "S,жен,неод=(вин,мн|род,ед|им,мн)")
+    Grammeme: string
+    [<JsonPropertyName("qual")>]
+    /// Word qualifier (e.g. "bastard")
+    Qualifier: string
 }
-    
+
 [<Struct>]
 [<CLIMutable>]
 type MystemLemma = {
-    text: string
-    analysis: MystemAnalysisResult[]
+    [<JsonPropertyName("text")>]
+    /// Original text from input
+    Text: string
+    [<JsonPropertyName("analysis")>]
+    /// Results of analysis
+    AnalysisResults: MystemAnalysisResult[]
 }
 
 type IMystem =
@@ -70,29 +82,15 @@ type internal MystemMailboxMessage =
     | CliEvent of Event: CommandEvent
     | Send of Text: string * ReplyChannel: AsyncReplyChannel<string>
     
-type MystemProcess(args: string[]) =
+type internal MystemProcess(installer: MystemInstaller, args: string[]) =
     let stdin = new SimplexStream()
     let sr = new StreamWriter(stdin)
     let cts = new CancellationTokenSource()
     let mutable mystemCommand = null
     
-    let mystemTimeout = TimeSpan.FromSeconds(10.0)
-    
     let mailbox = MailboxProcessor.Start(fun (mb: MailboxProcessor<MystemMailboxMessage>) -> async {
         while true do 
             match! mb.Receive() with
-            | CliEvent event ->
-                match event with 
-                | :? StartedCommandEvent as started ->
-                    printf $"Started process with id {started.ProcessId}"
-                | :? StandardOutputCommandEvent as stdout ->
-                    printf $"stdout: {stdout.Text}"
-                | :? StandardErrorCommandEvent as stderr ->
-                    printf $"stderr: {stderr.Text}"
-                | :? ExitedCommandEvent as exited ->
-                    printf $"process exited: {exited.ExitCode}"
-                | _ ->
-                    failwith $"Unknown event: {event.GetType()}"
             | Send (text, replyChannel) ->
                 do! sr.WriteLineAsync(text) |> Async.AwaitTask
                 do! sr.FlushAsync() |> Async.AwaitTask
@@ -106,19 +104,21 @@ type MystemProcess(args: string[]) =
                             | _ -> None
                         | _ -> None)
                 replyChannel.Reply(response)
+            | _ ->
+                ()
     })
         
     let startMystem() = async {
         if mystemCommand = null then
             if not <| RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
                 do! Cli.Wrap("chmod")
-                        .WithArguments([| "+x"; mystemBin |])
+                        .WithArguments([| "+x"; installer.InstalledPath |])
                         .ExecuteAsync().Task
                     |> Async.AwaitTask
                     |> Async.Ignore
             
             let command =
-                Cli.Wrap(mystemBin)
+                Cli.Wrap(installer.InstalledPath)
                     .WithArguments(args)
                     .WithValidation(CommandResultValidation.ZeroExitCode)
                     .WithWorkingDirectory(Path.GetTempPath())
@@ -141,13 +141,28 @@ type MystemProcess(args: string[]) =
         return! mailbox.PostAndAsyncReply(fun chan -> Send (str, chan)) |> Async.StartAsTask
     }
     
+    static member ParseFile(mystemInstalledPath, args, filePath: string) = task {
+        let sb = StringBuilder()
+        
+        let! result =
+            Cli.Wrap(mystemInstalledPath)
+                .WithArguments(Array.append args [| filePath |])
+                .WithValidation(CommandResultValidation.ZeroExitCode)
+                .WithWorkingDirectory(Path.GetTempPath())
+                .WithStandardOutputPipe(PipeTarget.ToStringBuilder sb)
+                .ExecuteAsync()
+        
+        return sb.ToString()
+    }
+    
     interface IDisposable with
         member x.Dispose() =
             stdin.Dispose()
             sr.Dispose()
+            cts.Cancel()
             cts.Dispose()
 
-type Mystem(settings: MystemSettings) =
+type Mystem(settings: MystemSettings) as x =
     let mystemArgs =
         [|
             "--format"
@@ -175,13 +190,12 @@ type Mystem(settings: MystemSettings) =
     
     let httpClient = new HttpClient()
     let installer = MystemInstaller(httpClient)
-    let mystemProcess = new MystemProcess(mystemArgs)
+    let mystemProcess = new MystemProcess(installer, mystemArgs)
     let jsonOptions =
         JsonSerializerOptions(IgnoreNullValues=true)
         
     let ensureMystem() = task {
-        if not <| File.Exists(mystemBin) then 
-            do! installer.Install()
+        do! installer.Install(settings.MystemBinaryPath)
     }
             
     let analyze (text: string) = task {
@@ -190,7 +204,37 @@ type Mystem(settings: MystemSettings) =
         let! response = mystemProcess.SendStringAndWaitForResponse(text)
         return JsonSerializer.Deserialize<MystemLemma[]>(response, jsonOptions)
     }
+    
+    let analyzeFile (filePath: string) = task {
+        do! ensureMystem()
         
+        let! response = MystemProcess.ParseFile(installer.InstalledPath, mystemArgs, filePath)
+        return JsonSerializer.Deserialize<MystemLemma[]>(response, jsonOptions)
+    }
+    
+    let analysisResultsToLemmas (lemmas: MystemLemma[]) =
+        lemmas
+        |> Array.map (fun lemma ->
+            if lemma.AnalysisResults = null || lemma.AnalysisResults.Length = 0 then
+                lemma.Text
+            else
+                lemma.AnalysisResults.[0].Lexeme
+        )
+    
+    let lemmatizeFile (filePath: string) = task {
+        let! analysisResult = analyzeFile filePath
+        return analysisResultsToLemmas analysisResult
+    }
+    
+    let lemmatize (text: string) = task {
+        let! analysisResult = analyze text
+        return analysisResultsToLemmas analysisResult
+    }
+    
+    member val Mystem: IMystem = x :> IMystem
+    
+    member x.EnsureMystem() = ensureMystem()
+    
     new() = new Mystem(MystemSettings())
     
     interface IDisposable with
@@ -200,6 +244,6 @@ type Mystem(settings: MystemSettings) =
             
     interface IMystem with
         member this.Analyze(text) = analyze text
-        member this.AnalyzeFile(filePath) = failwith "todo"
-        member this.Lemmatize(text) = failwith "todo"
-        member this.LemmatizeFile(filePath) = failwith "todo" 
+        member this.AnalyzeFile(filePath) = analyzeFile filePath
+        member this.Lemmatize(text) = lemmatize text
+        member this.LemmatizeFile(filePath) = lemmatizeFile filePath

@@ -1,4 +1,9 @@
-module Mystem.Net.Installer
+module internal Mystem.Net.Installer
+
+open System.Runtime.CompilerServices
+
+[<assembly: InternalsVisibleTo("Mystem.Net.Tests")>]
+do()
 
 open System
 open System
@@ -10,23 +15,23 @@ open SharpCompress.Common
 open SharpCompress.Readers
 
 [<Literal>]
-let MystemPathEnvVariableName = "MYSTEM3_PATH" 
+let private MystemPathEnvVariableName = "MYSTEM3_PATH" 
 
-let mystemExe =
+let private mystemExe =
     if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
         "mystem.exe"
     else
         "mystem"
 
-let mystemDir, mystemBin =
+let private mystemBin =
     let mystemEnvPath = Environment.GetEnvironmentVariable(MystemPathEnvVariableName)
     if not <| String.IsNullOrWhiteSpace mystemEnvPath && File.Exists(mystemEnvPath) then 
-        Path.GetDirectoryName(mystemEnvPath), mystemEnvPath
+        mystemEnvPath
     else
         let dir = Path.GetFullPath("local/bin")
         // TODO: wtf (spans)?
         let fullPath = Path.Join(ReadOnlySpan(dir |> Seq.toArray), ReadOnlySpan(mystemExe |> Seq.toArray))
-        dir, fullPath
+        fullPath
 
 type MystemInstaller(httpClient: HttpClient) =
     let tarballUrl =
@@ -45,8 +50,10 @@ type MystemInstaller(httpClient: HttpClient) =
         else
             failwith "Unsupported platform"
          
-    let install() = task {
+    let install(mystemBin) = task {
         printf $"Installing mystem to %s{mystemBin} from %s{tarballUrl}"
+        
+        let mystemDir = Path.GetDirectoryName(mystemBin)
         Directory.CreateDirectory(mystemDir) |> ignore
         
         let tempPath = Path.GetTempFileName()
@@ -66,8 +73,17 @@ type MystemInstaller(httpClient: HttpClient) =
         finally
             File.Delete(tempPath)
     }
-         
-    member x.Install() = task {
+    
+    member val InstalledPath = mystemBin with get, set
+    
+    member x.Install(mystemCustomPath: string) = task {
+        let mystemBin = 
+            if String.IsNullOrWhiteSpace mystemCustomPath then
+                mystemBin
+            else
+                mystemCustomPath
+            
         if not <| File.Exists mystemBin then
-            do! install()
+            do! install(mystemBin)
+            x.InstalledPath <- mystemBin
     }
