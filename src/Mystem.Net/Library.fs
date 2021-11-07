@@ -126,8 +126,16 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
                     |> Async.Ignore
             
             let command =
-                Cli.Wrap(installer.InstalledPath)
-                    .WithArguments(args)
+                if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+                    let concattedArgs = String.concat " " args
+                    Cli.Wrap("cmd")
+                        .WithArguments($"/c chcp 65001 > null && {installer.InstalledPath} {concattedArgs}")
+                else 
+                    Cli.Wrap(installer.InstalledPath)
+                        .WithArguments(args)
+                        
+            let command =
+                command
                     .WithValidation(CommandResultValidation.ZeroExitCode)
                     .WithWorkingDirectory(Path.GetTempPath())
                     .WithStandardInputPipe(PipeSource.FromStream stdin)
