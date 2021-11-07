@@ -1,11 +1,11 @@
 module internal Mystem.Net.Installer
 
 open System.Runtime.CompilerServices
+open CliWrap
 
 [<assembly: InternalsVisibleTo("Mystem.Net.Tests")>]
 do()
 
-open System
 open System
 open System.IO
 open System.Net.Http
@@ -14,26 +14,30 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open SharpCompress.Common
 open SharpCompress.Readers
 
-[<Literal>]
-let private MystemPathEnvVariableName = "MYSTEM3_PATH" 
-
-let private mystemExe =
-    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-        "mystem.exe"
-    else
-        "mystem"
-
-let private mystemBin =
-    let mystemEnvPath = Environment.GetEnvironmentVariable(MystemPathEnvVariableName)
-    if not <| String.IsNullOrWhiteSpace mystemEnvPath && File.Exists(mystemEnvPath) then 
-        mystemEnvPath
-    else
-        let dir = Path.GetFullPath("local/bin")
-        // TODO: wtf (spans)?
-        let fullPath = Path.Join(ReadOnlySpan(dir |> Seq.toArray), ReadOnlySpan(mystemExe |> Seq.toArray))
-        fullPath
-
-type MystemInstaller(httpClient: HttpClient) =
+type MystemInstaller(mystemCustomPath, httpClient: HttpClient) =
+    
+    [<Literal>]
+    let MystemPathEnvVariableName = "MYSTEM3_PATH"
+    
+    let mystemExe =
+        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+            "mystem.exe"
+        else
+            "mystem"
+    
+    let mystemBin =
+        if String.IsNullOrWhiteSpace mystemCustomPath then 
+            let mystemEnvPath = Environment.GetEnvironmentVariable(MystemPathEnvVariableName)
+            if String.IsNullOrWhiteSpace mystemEnvPath then
+                let dir = Path.GetFullPath("local/bin")
+                // TODO: wtf (spans)?
+                let fullPath = Path.Join(ReadOnlySpan(dir |> Seq.toArray), ReadOnlySpan(mystemExe |> Seq.toArray))
+                fullPath
+            else 
+                mystemEnvPath
+        else
+            mystemCustomPath
+    
     let tarballUrl =
         if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
             match RuntimeInformation.OSArchitecture with
@@ -49,8 +53,33 @@ type MystemInstaller(httpClient: HttpClient) =
             "http://download.cdn.yandex.net/mystem/mystem-3.1-macosx.tar.gz"
         else
             failwith "Unsupported platform"
-         
-    let install(mystemBin) = task {
+
+    let mutable isInstalledCache = false 
+    
+    let mystemIsInstalled() = task {
+        if isInstalledCache then
+            return true
+        else 
+            if File.Exists mystemBin then
+                let fileInfo = FileInfo(mystemBin)
+                if fileInfo.Length > 1024L then
+                    let! result =
+                         Cli.Wrap(mystemBin)
+                             .WithArguments("--help")
+                             .WithValidation(CommandResultValidation.None)
+                             .ExecuteAsync()
+                    if result.ExitCode = 0 then
+                        isInstalledCache <- true
+                        return true
+                    else
+                        return false 
+                else
+                    return false
+            else
+                return false
+    }
+    
+    let install() = task {
         printf $"Installing mystem to %s{mystemBin} from %s{tarballUrl}"
         
         let mystemDir = Path.GetDirectoryName(mystemBin)
@@ -74,16 +103,10 @@ type MystemInstaller(httpClient: HttpClient) =
             File.Delete(tempPath)
     }
     
-    member val InstalledPath = mystemBin with get, set
+    member val InstalledPath = mystemBin with get
     
-    member x.Install(mystemCustomPath: string) = task {
-        let mystemBin = 
-            if String.IsNullOrWhiteSpace mystemCustomPath then
-                mystemBin
-            else
-                mystemCustomPath
-            
-        if not <| File.Exists mystemBin then
-            do! install(mystemBin)
-            x.InstalledPath <- mystemBin
+    member x.Install() = task {
+        let! mystemIsInstalled = mystemIsInstalled()
+        if not mystemIsInstalled then
+            do! install()
     }

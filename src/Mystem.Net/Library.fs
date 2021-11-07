@@ -89,25 +89,33 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
     let mutable mystemCommand = null
     
     let mailbox = MailboxProcessor.Start(fun (mb: MailboxProcessor<MystemMailboxMessage>) -> async {
-        while true do 
-            match! mb.Receive() with
-            | Send (text, replyChannel) ->
-                do! sr.WriteLineAsync(text) |> Async.AwaitTask
-                do! sr.FlushAsync() |> Async.AwaitTask
-                let! response =
-                    mb.Scan(fun message -> 
-                        match message with
-                        | CliEvent event ->
-                            match event with
-                            | :? StandardOutputCommandEvent as str ->
-                                Some (async.Return str.Text)
-                            | _ -> None
-                        | _ -> None)
-                replyChannel.Reply(response)
-            | _ ->
-                ()
-    })
-        
+        try 
+            while true do
+                match! mb.Receive() with
+                | Send (text, replyChannel) ->
+                    do! sr.WriteLineAsync(text) |> Async.AwaitTask
+                    do! sr.FlushAsync() |> Async.AwaitTask
+                    let! response =
+                        mb.Scan(fun message -> 
+                            match message with
+                            | CliEvent event ->
+                                match event with
+                                | :? StandardOutputCommandEvent as str ->
+                                    Some (async.Return str.Text)
+                                | _ -> None
+                            | _ -> None)
+                    replyChannel.Reply(response)
+                | CliEvent event ->
+                    match event with
+                    | :? ExitedCommandEvent as exited ->
+                        printfn "Process has exited: %A" exited.ExitCode
+                        cts.Cancel()
+                    | _ -> ()
+        with e ->
+            printfn "Exception has occured %A" e
+            cts.Cancel()
+    }, cancellationToken=cts.Token)
+
     let startMystem() = async {
         if mystemCommand = null then
             if not <| RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
@@ -138,7 +146,8 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
             
     member x.SendStringAndWaitForResponse(str: string) = task {
         do! startMystem()
-        return! mailbox.PostAndAsyncReply(fun chan -> Send (str, chan)) |> Async.StartAsTask
+        let computation = mailbox.PostAndAsyncReply(fun chan -> Send (str, chan)) 
+        return! Async.StartAsTask(computation, cancellationToken=cts.Token)
     }
     
     static member ParseFile(mystemInstalledPath, args, filePath: string) = task {
@@ -189,15 +198,15 @@ type Mystem(settings: MystemSettings) as x =
         |]
     
     let httpClient = new HttpClient()
-    let installer = MystemInstaller(httpClient)
+    let installer = MystemInstaller(settings.MystemBinaryPath, httpClient)
     let mystemProcess = new MystemProcess(installer, mystemArgs)
     let jsonOptions =
         JsonSerializerOptions(IgnoreNullValues=true)
         
     let ensureMystem() = task {
-        do! installer.Install(settings.MystemBinaryPath)
+        do! installer.Install()
     }
-            
+    
     let analyze (text: string) = task {
         do! ensureMystem()
         
