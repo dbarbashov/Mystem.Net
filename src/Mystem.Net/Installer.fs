@@ -80,7 +80,7 @@ type MystemInstaller(mystemCustomPath, httpClient: HttpClient) =
     }
     
     let install() = task {
-        printf $"Installing mystem to %s{mystemBin} from %s{tarballUrl}"
+        printfn $"Installing mystem to %s{mystemBin} from %s{tarballUrl}"
         
         let mystemDir = Path.GetDirectoryName(mystemBin)
         Directory.CreateDirectory(mystemDir) |> ignore
