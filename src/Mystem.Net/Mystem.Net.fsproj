@@ -7,6 +7,17 @@
         <RootNamespace>Mystem.net</RootNamespace>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <PackageId>Mystem.Net</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>dbarbashov and contributors</Authors>
+        <Company>No company</Company>
+        <PackageTags>mystem lemmatizer lemmatization nlp stemming russian</PackageTags>
+        <Description>Wrapper for a great CLI russian language stemming tool Yandex Mystem</Description>
+        <RepositoryUrl>https://github.com/dbarbashov/Mystem.Net</RepositoryUrl>
+        <PackageLicenseUrl>https://github.com/dbarbashov/Mystem.Net/blob/main/LICENSE</PackageLicenseUrl>
+    </PropertyGroup>
+
     <ItemGroup>
         <Compile Include="Installer.fs" />
         <Compile Include="Library.fs" />
