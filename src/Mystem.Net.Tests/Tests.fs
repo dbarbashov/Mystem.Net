@@ -1,6 +1,5 @@
 module Mystem.Net.Tests
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open System.IO
 open System.Net.Http
 open NUnit.Framework
@@ -28,6 +27,14 @@ let ``Should analyze in row`` () = task {
 }
 
 [<Test>]
+let ``Should analyze file``() = task {
+    use mystem = new Mystem(MystemSettings(MystemBinaryPath=testRunMystemPath))
+    let mystem = mystem :> IMystem
+    let! _ = mystem.AnalyzeFile("input.txt")
+    Assert.Pass()
+}
+
+[<Test>]
 let ``Should lemmatize`` () = task {
     use mystem = new Mystem(MystemSettings(MystemBinaryPath=testRunMystemPath))
     let mystem = mystem :> IMystem
@@ -44,6 +51,14 @@ let ``Should lemmatize in row`` () = task {
     
     let! actual = mystem.Lemmatize("Брат ел яблоко")
     Assert.AreEqual([| "брат"; " "; "есть"; " "; "яблоко"; "\n" |], actual)
+}
+
+[<Test>]
+let ``Should lemmatize file``() = task {
+    use mystem = new Mystem(MystemSettings(MystemBinaryPath=testRunMystemPath))
+    let mystem = mystem :> IMystem
+    let! actual = mystem.LemmatizeFile("input.txt")
+    Assert.AreEqual([| "мама"; " "; "мыть"; " "; "рама"; "\n" |], actual)
 }
     
 [<Test>]

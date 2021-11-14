@@ -13,7 +13,6 @@ open CliWrap
 open CliWrap.EventStream
 open FSharp.Control
 open Mystem.Net.Installer
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Nerdbank.Streams
 
 [<Struct>]
@@ -84,7 +83,7 @@ type internal MystemMailboxMessage =
     
 type internal MystemProcess(installer: MystemInstaller, args: string[]) =
     let stdin = new SimplexStream()
-    let sr = new StreamWriter(stdin)
+    let streamWriter = new StreamWriter(stdin)
     let cts = new CancellationTokenSource()
     let mutable mystemCommand = null
     
@@ -93,8 +92,8 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
             while true do
                 match! mb.Receive() with
                 | Send (text, replyChannel) ->
-                    do! sr.WriteLineAsync(text) |> Async.AwaitTask
-                    do! sr.FlushAsync() |> Async.AwaitTask
+                    do! streamWriter.WriteLineAsync(text) |> Async.AwaitTask
+                    do! streamWriter.FlushAsync() |> Async.AwaitTask
                     let! response =
                         mb.Scan(fun message -> 
                             match message with
@@ -137,7 +136,6 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
             let command =
                 command
                     .WithValidation(CommandResultValidation.ZeroExitCode)
-                    .WithWorkingDirectory(Path.GetTempPath())
                     .WithStandardInputPipe(PipeSource.FromStream stdin)
                     
             let eventStream = command.ListenAsync()
@@ -159,23 +157,27 @@ type internal MystemProcess(installer: MystemInstaller, args: string[]) =
     }
     
     static member ParseFile(mystemInstalledPath, args, filePath: string) = task {
-        let sb = StringBuilder()
+        let stdout = StringBuilder()
+        let stderr = StringBuilder()
         
-        let! result =
-            Cli.Wrap(mystemInstalledPath)
-                .WithArguments(Array.append args [| filePath |])
-                .WithValidation(CommandResultValidation.ZeroExitCode)
-                .WithWorkingDirectory(Path.GetTempPath())
-                .WithStandardOutputPipe(PipeTarget.ToStringBuilder sb)
-                .ExecuteAsync()
-        
-        return sb.ToString()
+        try 
+            do!
+                Cli.Wrap(mystemInstalledPath)
+                    .WithArguments(Array.append args [| filePath |])
+                    .WithValidation(CommandResultValidation.ZeroExitCode)
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder stdout)
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder stderr)
+                    .ExecuteAsync()
+                    .Task :> Task
+        finally
+            printfn $"Mystem error: {stderr.ToString()}"
+        return stdout.ToString()
     }
     
     interface IDisposable with
         member x.Dispose() =
             stdin.Dispose()
-            sr.Dispose()
+            streamWriter.Dispose()
             cts.Cancel()
             cts.Dispose()
 

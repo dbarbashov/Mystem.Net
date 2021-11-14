@@ -10,7 +10,6 @@ open System
 open System.IO
 open System.Net.Http
 open System.Runtime.InteropServices
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open SharpCompress.Common
 open SharpCompress.Readers
 

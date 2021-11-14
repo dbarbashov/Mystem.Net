@@ -14,11 +14,10 @@
 
     <ItemGroup>
       <PackageReference Include="CliWrap" Version="3.3.3" />
-      <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.0" />
+      <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
       <PackageReference Include="Nerdbank.Streams" Version="2.8.50" />
       <PackageReference Include="SharpCompress" Version="0.30.0" />
       <PackageReference Include="System.Text.Json" Version="5.0.0" />
-      <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
     </ItemGroup>
 
 </Project>
