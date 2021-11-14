@@ -7,6 +7,8 @@ The wrapper is released under MIT license, although one should consider that mys
 
 # Usage
 
+Mystem is downloaded to default path (`~/.local/bin/mystem`) upon first usage of lemmatize or analyze. It is possible to specify custom mystem path by passing MystemSettings to Mystem constructor ([example](https://github.com/dbarbashov/mystem.net/blob/main/src/Mystem.Net.Tests/Tests.fs#L13)).
+
 ### Analyze
 ```fsharp
 open Mystem.Net
