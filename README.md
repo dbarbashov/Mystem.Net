@@ -10,6 +10,7 @@ The wrapper has MIT license, although one should consider that mystem itself is 
 ### Analyze
 ```fsharp
 open Mystem.Net
+// Implements IDisposable
 let mystem = new Mystem()
 
 let lemmas = mystem.Mystem.Analyze("мама мыла раму").Result
