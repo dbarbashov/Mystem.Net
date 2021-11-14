@@ -1,9 +1,9 @@
 # Mystem.Net
 
-This is a wrapper for great CLI tool [Yandex Mystem](https://yandex.ru/dev/mystem/). 
+This is a wrapper for a great CLI tool [Yandex Mystem](https://yandex.ru/dev/mystem/). 
 This library is hugely inspired by [pymystem3](https://github.com/nlpub/pymystem3)
 
-The wrapper has MIT license, although one should consider that mystem itself is not open source and has [different license](https://yandex.ru/legal/mystem/).
+The wrapper is released under MIT license, although one should consider that mystem itself is not open source and has [different license](https://yandex.ru/legal/mystem/).
 
 # Usage
 
