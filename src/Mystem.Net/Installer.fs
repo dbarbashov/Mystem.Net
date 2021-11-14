@@ -29,7 +29,8 @@ type MystemInstaller(mystemCustomPath, httpClient: HttpClient) =
         if String.IsNullOrWhiteSpace mystemCustomPath then 
             let mystemEnvPath = Environment.GetEnvironmentVariable(MystemPathEnvVariableName)
             if String.IsNullOrWhiteSpace mystemEnvPath then
-                let dir = Path.GetFullPath("local/bin")
+                let homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                let dir = Path.GetFullPath("local/bin", homeDir)
                 // TODO: wtf (spans)?
                 let fullPath = Path.Join(ReadOnlySpan(dir |> Seq.toArray), ReadOnlySpan(mystemExe |> Seq.toArray))
                 fullPath
