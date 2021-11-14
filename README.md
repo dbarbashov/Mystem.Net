@@ -1,5 +1,7 @@
 # Mystem.Net
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/dbarbashov/Mystem.Net/build-and-test)
+
 This is a wrapper for a great CLI tool [Yandex Mystem](https://yandex.ru/dev/mystem/). 
 This library is hugely inspired by [pymystem3](https://github.com/nlpub/pymystem3)
 
